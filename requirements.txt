@@ -1,6 +1,0 @@
-account.json
-database.png
-monitoring
-Lib
-Scripts
-pyvenv.cfg
