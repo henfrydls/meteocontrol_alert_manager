@@ -8,3 +8,10 @@ monitoring
 Lib
 Scripts
 pyvenv.cfg
+__pycache__
+
+# exclude everything
+resources/*
+
+# exception to the rule
+!resources/SAVER.txt
