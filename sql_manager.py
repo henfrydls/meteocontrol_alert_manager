@@ -8,27 +8,32 @@ class SQL_Users:
         self.TABLE_NAME = "Users"
         self.creating_table()
 
+
     def __del__(self):
         print("Object being destroy")
+
 
     def creating_table(self) -> None:
         self.cur.executescript(f"""CREATE TABLE IF NOT EXISTS {self.TABLE_NAME}
                     (user_id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
                     user TEXT UNIQUE,
-                    server TEXT, 
-                    server_name TEXT,
-                    encpasswd TEXT
+                    server TEXT NOT NULL, 
+                    server_name TEXT NOT NULL,
+                    encpasswd TEXT NOT NULL,
+                    key TEXT NOT NULL
                     );
                     """)
 
-    def saving_info(self, email: str, server: str, server_name: str, encpasswd: str) -> None:
+
+    def saving_info(self, email: str, server: str, server_name: str, encpasswd: bytes, key: bytes) -> None:
         """Save provided mail, server, and password to a database"""
 
         self.cur.execute('''INSERT INTO Users 
-            (user, server, server_name, encpasswd)
-            VALUES (?, ?, ?, ?)''', (email, server, server_name, encpasswd, ))
+            (user, server, server_name, encpasswd, key)
+            VALUES (?, ?, ?, ?, ?)''', (email, server, server_name, encpasswd, key))
 
         self.connection.commit()
+
 
     def show_registered_users(self) -> dict:
         """Get user_id and user from table Users"""
@@ -50,10 +55,13 @@ class SQL_Users:
         else:
             return False
     
-    def update_existing_password(self, user_id: int, encpassword: str) -> None:
+
+    def update_existing_password(self, user_id: int, encpassword: str, key:bytes) -> None:
         """Update password"""
 
-        self.cur.execute("UPDATE Users SET encpasswd = ? WHERE user_id = ?", (encpassword, user_id))
+        self.cur.execute("UPDATE Users SET encpasswd = ?, key = ? WHERE user_id = ?", 
+                        (encpassword, key, user_id))
+        
         self.connection.commit()
 
 class Data:
@@ -64,29 +72,36 @@ class Data:
         self.TABLE_NAME = "Data"
         self.creating_table()
 
+
     def __del__(self) -> None:
         print("Object being destroy")
+
 
     def creating_table(self) -> None:
         """Creates a table if it still does not exist"""
         self.cur.executescript(f"""CREATE TABLE IF NOT EXISTS {self.TABLE_NAME}
-                    (id PRIMARY KEY AUTOINCREMENT UNIQUE,
+                    (id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
                     last_update TEXT,
                     read_messages TEXT,
                     login_user INTEGER FOREING KEY UNIQUE);
                     """)
 
+
     def login_preferences(self, ind) -> None:
         """Change the FOREING KEY related to login"""
         
         self.cur.execute("SELECT last_update, read_messages FROM Data")
-        last_update, read_messages = self.cur.fetchone()[0], self.cur.fetchone()[1] 
+        response = self.cur.fetchone()
+        if response is not None:
+            last_update, read_messages = response[0], response[1]
+        else:
+            last_update = read_messages = None 
 
-        self.cur.execute(f'''INSERT INTO Data
+        self.cur.execute(f'''REPLACE INTO Data
         (last_update, read_messages, login_user) VALUES (?, ?, ?)''', (last_update, read_messages, ind))
         
         self.connection.commit()
 
+
     def login_info(self):
         pass
-

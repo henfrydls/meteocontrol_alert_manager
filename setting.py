@@ -1,7 +1,6 @@
 """Settings file for managing login info and encrypting"""
 
 from cryptography.fernet import Fernet
-import pyperclip as pc
 import re
 from sql_manager import SQL_Users, Data
 
@@ -44,23 +43,18 @@ def setting_server() -> str:
             print("Please select one of the options provide!")
             continue
 
+
 def password_manager(password : str) -> tuple:
     """This function recieved a password and encrypted it"""
     # generate a key for encryption and decryption
     key = Fernet.generate_key()
 
-    # Saving key on clipboard
-    pc.copy(str(key)[2:-1])
-
     fernet = Fernet(key)
     encpassword = fernet.encrypt(password.encode())
 
-    print(f"\nYour password key have been copied to clipboard!") 
-    print(f"Key: {str(key)[2:-1]}")
-    print("Save it somewhere secure and private!")  
-
     # Return encpassword and key in tuple
-    return (str(encpassword)[2:-1], password)
+    return (encpassword, password, key)
+
 
 def password_solver(encpassword: str, key: str) -> tuple:
     """A function to decrypt password"""
@@ -82,9 +76,11 @@ def conf_summary(email: str, server: str, password: str) -> bool:
     while True:
         choice = input("\nY/N? ")
         if choice.lower() == "y":
+            print(f"\n\tYour login info have been have been set!\n") 
             return True
         elif choice.lower() == "n":
             return False
+
 
 def settings_loop() -> None:
     """Set email and password, change password and display information."""
@@ -107,31 +103,32 @@ def settings_loop() -> None:
                 EMAIL : str = input("\nEmail: ").strip().lower()
                 if email_checker(EMAIL):
                     SERVER: str = setting_server()
-                    ENCPASSWORD, PASSWORD = password_manager(input("\nPassword: "))
+                    ENCPASSWORD, PASSWORD, KEY = password_manager(input("\nPassword: "))
                 else:
                     continue
                 if conf_summary(EMAIL, SERVER, PASSWORD):
-                    Users.saving_info(EMAIL, SERVER, SERVERS_DICT[SERVER], ENCPASSWORD)
+                    Users.saving_info(EMAIL, SERVER, SERVERS_DICT[SERVER], ENCPASSWORD, KEY)
                     ACTIVE = False
 
         elif options == "2":
             users = Users.show_registered_users()
             if users:
                 print("\nWARNING: A new encryting key will be generated.\n")
-                print("Choose an user_id.\n")
+                print("Choose an User ID.\n")
                 for user_id, user in users.items():
                     print(f"{user_id} - {user}")
 
                 while True:
                     response = input("\nResponse: ")
                     if response not in str(list(users.keys())):
-                        print("Please select a valid user_id\n")
+                        print("Please select a valid User ID\n")
                         continue
                     break
 
                 new_password = input("\nNew password: ")
-                ENCPASSWORD, PASSWORD = password_manager(new_password)
-                Users.update_existing_password(response, ENCPASSWORD)
+                ENCPASSWORD, _, KEY = password_manager(new_password)
+                Users.update_existing_password(response, ENCPASSWORD, KEY)
+                print("\nYour password have been updated!!!")
 
             else:
                 print("There are not users registered yet.\n")
@@ -146,16 +143,15 @@ def settings_loop() -> None:
                 while True:
                     response = input("\nResponse: ")
                     if response not in str(list(users.keys())):
-                        print("Please select a valid user_id\n")
+                        print("Please select a valid User ID\n")
                         continue
                     break
 
                 data.login_preferences(int(response))
-                print(f"Your Login information have been update to {list(users.values())[int(response)-1]}\n")
+                print(f"\nYour Login information have been update to {list(users.values())[int(response)-1]}\n")
 
             else:
                 print("There are not users registered yet.\n")
-
 
         elif options == "4":
             users = Users.show_registered_users()
