@@ -1,0 +1,1 @@
+Folder to manage all databases uses to set, configure and successfully run a BlueLog monitoring Solar Plant through meteocontrol.
