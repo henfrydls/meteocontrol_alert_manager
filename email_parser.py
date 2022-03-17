@@ -3,6 +3,9 @@ import email
 from email.header import decode_header
 import json
 import re
+from sql_manager import Data
+
+data = Data()
 
 with open("account.json") as jsonFile:
     jsonObject = json.load(jsonFile)
