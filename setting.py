@@ -1,13 +1,15 @@
 """Settings file for managing login info and encrypting"""
 
 from cryptography.fernet import Fernet
-import sqlite3
 import pyperclip as pc
 import re
+from sql_manager import SQL_Users, Data
 
 
 SERVERS_DICT = {"imap.gmail.com":"Gmail"}
-TABLE_NAME = "Users"
+Users = SQL_Users()
+data = Data()
+
 
 def welcome() -> None:
     """Welcomen message to setting portal"""
@@ -42,7 +44,6 @@ def setting_server() -> str:
             print("Please select one of the options provide!")
             continue
 
-
 def password_manager(password : str) -> tuple:
     """This function recieved a password and encrypted it"""
     # generate a key for encryption and decryption
@@ -61,6 +62,13 @@ def password_manager(password : str) -> tuple:
     # Return encpassword and key in tuple
     return (str(encpassword)[2:-1], password)
 
+def password_solver(encpassword: str, key: str) -> tuple:
+    """A function to decrypt password"""
+    # Instance the Fernet class with the key
+    fernet = Fernet(bytes(key))
+    
+    return fernet.decrypt(encpassword).decode()
+
 
 def conf_summary(email: str, server: str, password: str) -> bool:
     """Checks if the user wants to keep the preious configuration."""
@@ -78,70 +86,6 @@ def conf_summary(email: str, server: str, password: str) -> bool:
         elif choice.lower() == "n":
             return False
 
-
-def saving_info(email: str, server: str, server_name: str, encpasswd: str) -> None:
-    """Save provided mail, server, and password to a database"""
-
-    connection = sqlite3.connect("resources/users.sqlite")
-    # Creating a way to send and recieve commands
-    cur = connection.cursor()
-
-    cur.executescript(f"""CREATE TABLE IF NOT EXISTS {TABLE_NAME}
-                (user_id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
-                user TEXT UNIQUE,
-                server TEXT, 
-                server_name TEXT,
-                encpasswd TEXT
-                );
-                """)
-
-    cur.execute('''INSERT INTO Users 
-        (user, server, server_name, encpasswd)
-		VALUES (?, ?, ?, ?)''', (email, server, server_name, encpasswd, ))
-
-    connection.commit()
-    connection.close()
-    
-
-def show_registered_users() -> dict:
-    """Get user_id and user from table Users"""
-
-    connection = sqlite3.connect("resources/users.sqlite")
-    # Creating a way to send and recieve commands
-    cur = connection.cursor()
-    
-    cur.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{TABLE_NAME}';")
-    response = cur.fetchone()
-    if response != None:
-        users = dict()
-
-        cur.execute("SELECT COUNT(user_id) FROM Users")
-        registered_users = int(cur.fetchone()[0])
-        cur.execute(("SELECT user_id, user FROM Users"))
-
-        for _ in range(registered_users):
-            user = cur.fetchone()
-            users[user[0]] = user[1]
-        
-        connection.close()
-
-        return users
-    else:
-        return False
-
-
-def update_existing_password(user_id: int, encpassword: str) -> None:
-    """Update password"""
-
-    connection = sqlite3.connect("resources/users.sqlite")
-    # Creating a way to send and recieve commands
-    cur = connection.cursor() 
-
-    cur.execute("UPDATE Users SET encpasswd = ? WHERE user_id = ?", (encpassword, user_id))
-    connection.commit()
-    connection.close()
-
-
 def settings_loop() -> None:
     """Set email and password, change password and display information."""
 
@@ -152,7 +96,8 @@ def settings_loop() -> None:
         What do you want to do?
         1. Set email and password
         2. Change password
-        3. Show all login info
+        3. Select user to login
+        4. Show all login info
         \nResponse: """)
         print("\n")
 
@@ -166,11 +111,11 @@ def settings_loop() -> None:
                 else:
                     continue
                 if conf_summary(EMAIL, SERVER, PASSWORD):
-                    saving_info(EMAIL, SERVER, SERVERS_DICT[SERVER], ENCPASSWORD)
+                    Users.saving_info(EMAIL, SERVER, SERVERS_DICT[SERVER], ENCPASSWORD)
                     ACTIVE = False
 
         elif options == "2":
-            users = show_registered_users()
+            users = Users.show_registered_users()
             if users:
                 print("\nWARNING: A new encryting key will be generated.\n")
                 print("Choose an user_id.\n")
@@ -178,23 +123,44 @@ def settings_loop() -> None:
                     print(f"{user_id} - {user}")
 
                 while True:
-                    response = int(input("\nResponse: "))
-                    if response not in list(users.keys()):
+                    response = input("\nResponse: ")
+                    if response not in str(list(users.keys())):
                         print("Please select a valid user_id\n")
                         continue
                     break
 
                 new_password = input("\nNew password: ")
                 ENCPASSWORD, PASSWORD = password_manager(new_password)
-                update_existing_password(response, ENCPASSWORD)
+                Users.update_existing_password(response, ENCPASSWORD)
 
             else:
                 print("There are not users registered yet.\n")
 
         elif options == "3":
-            users = show_registered_users()
+            print("Select an email to login.\n")
+            users = Users.show_registered_users()
             if users:
-                for user_id, user in users.items():
+                for user_id, user in sorted(users.items()):
+                    print(f"{user_id} - {user}")
+
+                while True:
+                    response = input("\nResponse: ")
+                    if response not in str(list(users.keys())):
+                        print("Please select a valid user_id\n")
+                        continue
+                    break
+
+                data.login_preferences(int(response))
+                print(f"Your Login information have been update to {list(users.values())[int(response)-1]}\n")
+
+            else:
+                print("There are not users registered yet.\n")
+
+
+        elif options == "4":
+            users = Users.show_registered_users()
+            if users:
+                for user_id, user in sorted(users.items()):
                     print(f"{user_id} - {user}")
             else:
                 print("There are not users registered yet.\n")
@@ -202,9 +168,8 @@ def settings_loop() -> None:
         else:
             break
 
-""" if __name__ == "__main__":
+if __name__ == "__main__":
+    
     welcome()
-    settings_loop() """
-
-welcome()
-settings_loop()
+    settings_loop()
+    
