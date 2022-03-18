@@ -1,34 +1,16 @@
-import imaplib
 import email
 from email.header import decode_header
 import json
 import re
 from sql_manager import Data
+from login import Login
 
-data = Data()
+LG = Login()
 
-with open("account.json") as jsonFile:
-    jsonObject = json.load(jsonFile)
-    jsonFile.close()
-
-username = jsonObject["email"]
-password = jsonObject["password"]
-meteocontrol = jsonObject["meteocontrol_email"]
-
-# create an IMAP4 class with SSL 
-imap = imaplib.IMAP4_SSL("imap.gmail.com")
-# authenticate
-try:
-    imap.login(username, password)
-except:
-    pass
-status, messages = imap.select("INBOX")
-# total number of emails
-messages = int(messages[0])
-# number of top emails to fetch
-N = messages
-
-verified_plant_names = list()
+if not LG.login():
+    print("""\nPlease go to setting.py and set/check your login info.\n""")
+else:
+    N = LG.messages()
 
 def clean(text):
     # clean text for creating a folder
@@ -63,7 +45,6 @@ def extraction(body, id, ind):
 def storing(info_pack, id):
     """Temporary non-formatted way of storing"""
     time, description, state, device, name = info_pack
-    verified_plant_names.append(name)
     jsonFile_e = open(f".\monitoring\{id}.json", "a")
     for i in range(len(time)):
         jsonformat = {
@@ -111,50 +92,41 @@ def main(body, debug=True):
         # Temporary way of storing formated data
         storing(info_pack, id)
 
-
-for i in range(messages, messages-N, -1):
-    print(f"{i}/{messages}")
-    # fetch the email message by ID
-    res, msg = imap.fetch(str(i), "(RFC822)")
-    for response in msg:
-        if isinstance(response, tuple):
-            # parse a bytes email into a message object
-            msg = email.message_from_bytes(response[1])
-            # decode the email subject
-            subject, encoding = decode_header(msg["Subject"])[0]
-            if isinstance(subject, bytes):
-                # if it's a bytes, decode to str
-                subject = subject.decode(encoding)
-            # decode email sender
-            From, encoding = decode_header(msg.get("From"))[0]
-            # cleaning from
-            from_clean = (((From.split("<"))[1]).split(">")[0])
-            # just review emails comming from a particular source
-            if (from_clean.strip() == meteocontrol):
-                # if the email message is multipart
-                if msg.is_multipart():
-                    # iterate over email parts
-                    for part in msg.walk():
+def parsing() -> None:
+    for i in range(N, N-N, -1):
+        msg = LG.fetch(i)
+        for response in msg:
+            if isinstance(response, tuple):
+                # parse a bytes email into a message object
+                msg = email.message_from_bytes(response[1])
+                # decode the email subject
+                subject, encoding = decode_header(msg["Subject"])[0]
+                if isinstance(subject, bytes):
+                    # if it's a bytes, decode to str
+                    subject = subject.decode(encoding)
+                # decode email sender
+                From, encoding = decode_header(msg.get("From"))[0]
+                # cleaning from
+                from_clean = (((From.split("<"))[1]).split(">")[0])
+                # just review emails comming from a particular source
+                if (from_clean.strip() == LG.monitoring_email):
+                    # if the email message is multipart
+                    if msg.is_multipart():
+                        # iterate over email parts
+                        for part in msg.walk():
+                            # extract content type of email
+                            content_type = part.get_content_type()
+                            try:
+                                # get the email body
+                                body = part.get_payload(decode=True).decode()
+                            except:
+                                pass
+                            if content_type == "text/plain":
+                                main(body)       
+                    else:
                         # extract content type of email
-                        content_type = part.get_content_type()
-                        try:
-                            # get the email body
-                            body = part.get_payload(decode=True).decode()
-                        except:
-                            pass
+                        content_type = msg.get_content_type()
+                        # get the email body
+                        body = msg.get_payload(decode=True).decode()
                         if content_type == "text/plain":
-                            main(body)       
-                else:
-                    # extract content type of email
-                    content_type = msg.get_content_type()
-                    # get the email body
-                    body = msg.get_payload(decode=True).decode()
-                    if content_type == "text/plain":
-                        main(body)
-
-for plan_name in verified_plant_names:
-    print(plan_name)
-
-# close the connection and logout
-imap.close()
-imap.logout()
+                            main(body)
