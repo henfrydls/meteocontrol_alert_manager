@@ -14,4 +14,4 @@ __pycache__
 resources/*
 
 # exception to the rule
-!resources/SAVER.txt
+!resources/info.txt
