@@ -1,7 +1,7 @@
 import sqlite3
 
-class SQL_Users:
-    def __init__(self, location="resources/users.sqlite") -> None:
+class Users:
+    def __init__(self, location="resources/user_data.sqlite") -> None:
         self.connection = sqlite3.connect(location)
         # Creating a way to send and recieve commands
         self.cur = self.connection.cursor()
@@ -65,7 +65,7 @@ class SQL_Users:
         self.connection.commit()
 
 class Data:
-    def __init__(self, location="resources/data.sqlite") -> None:
+    def __init__(self, location="resources/user_data.sqlite") -> None:
         self.connection = sqlite3.connect(location)
         # Creating a way to send and recieve commands
         self.cur = self.connection.cursor()
@@ -103,5 +103,26 @@ class Data:
         self.connection.commit()
 
 
-    def login_info(self):
-        pass
+    def login_info(self) -> tuple:
+        """Get login info based on user login preferences"""
+
+        ##self.cur.executescript("""SELECT Users.user, Users.encpasswd, Users.key
+        #                FROM Data JOIN Users ON Data.login_user = Users.user_id;""")
+
+        self.cur.execute("""SELECT Users.user, Users.encpasswd, Users.key, Users.server
+                        FROM Data JOIN Users ON Data.login_user = Users.user_id
+                        ORDER BY Data.id DESC LIMIT 1;""")
+        response = self.cur.fetchone()
+        return(response)
+
+    def server_info(self) -> tuple:
+        """Get login info based on user login preferences"""
+
+        ##self.cur.executescript("""SELECT Users.user, Users.encpasswd, Users.key
+        #                FROM Data JOIN Users ON Data.login_user = Users.user_id;""")
+
+        self.cur.execute("""SELECT Users.user, Users.encpasswd, Users.key
+                        FROM Data JOIN Users ON Data.login_user = Users.user_id
+                        ORDER BY Data.id DESC LIMIT 1;""")
+        response = self.cur.fetchone()
+        return(response) 
