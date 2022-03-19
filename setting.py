@@ -82,13 +82,15 @@ def settings_loop() -> None:
                 EMAIL : str = input("\nEmail: ").strip().lower()
                 if email_checker(EMAIL):
                     SERVER: str = setting_server()
-                    x = input("\nPassword: ")
-                    print(x)
-                    ENCPASSWORD, PASSWORD, KEY = PW.password_manager(x)
+                    PASSWORD = input("\nPassword: ")
+                    ENCPASSWORD, PASSWORD, KEY = PW.password_manager(PASSWORD)
                 else:
                     continue
                 if conf_summary(EMAIL, SERVER, PASSWORD):
                     User.saving_info(EMAIL, SERVER, SERVERS_DICT[SERVER], ENCPASSWORD, KEY)
+                    users = User.show_registered_users()
+                    if len(users.keys()) == 1:
+                        data.login_preferences(1)
                 break
 
         elif options.strip() == "2":
