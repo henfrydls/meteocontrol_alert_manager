@@ -2,7 +2,6 @@ from sql_manager import Data
 from password import Password
 import imaplib
 
-
 class Login:
     def __init__(self) -> None:
         DT = Data()
