@@ -40,7 +40,7 @@ class Users:
         
         self.cur.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{self.TABLE_NAME}';")
         response = self.cur.fetchone()
-        if response != None:
+        if response is not None:
             users = dict()
 
             self.cur.execute("SELECT COUNT(user_id) FROM Users")
@@ -74,7 +74,7 @@ class Data:
 
 
     def __del__(self) -> None:
-        print("Object being destroy")
+        print(f"{__name__} being deleted")
 
 
     def creating_table(self) -> None:
@@ -106,23 +106,37 @@ class Data:
     def login_info(self) -> tuple:
         """Get login info based on user login preferences"""
 
-        ##self.cur.executescript("""SELECT Users.user, Users.encpasswd, Users.key
-        #                FROM Data JOIN Users ON Data.login_user = Users.user_id;""")
-
         self.cur.execute("""SELECT Users.user, Users.encpasswd, Users.key, Users.server
                         FROM Data JOIN Users ON Data.login_user = Users.user_id
                         ORDER BY Data.id DESC LIMIT 1;""")
         response = self.cur.fetchone()
         return(response)
 
-    def server_info(self) -> tuple:
-        """Get login info based on user login preferences"""
+class Alerts:
+    def __init__(self, location="resources/alerts.sqlite") -> None:
+        self.connection = sqlite3.connect(location)
+        # Creating a way to send and recieve commands
+        self.cur = self.connection.cursor()
+        self.TABLE_NAME = "Alerts"
+    
+    def creating_table(self, id) -> None:
+        self.cur.executescript(f"""CREATE TABLE IF NOT EXISTS '{id}'
+                    (time TEXT,
+                    description TEXT,
+                    state TEXT,
+                    device TEXT, 
+                    name TEXT);
+                    """)
 
-        ##self.cur.executescript("""SELECT Users.user, Users.encpasswd, Users.key
-        #                FROM Data JOIN Users ON Data.login_user = Users.user_id;""")
+    def storing_alerts(self, id, time, description, state, device, name) -> None:
+        self.cur.execute(f"""INSERT INTO '{id}'
+            (time, description, state, device, name)
+            VALUES (?, ?, ?, ?, ?)""",
+            (time, description[0], state[0], device[0], name[0],))
 
-        self.cur.execute("""SELECT Users.user, Users.encpasswd, Users.key
-                        FROM Data JOIN Users ON Data.login_user = Users.user_id
-                        ORDER BY Data.id DESC LIMIT 1;""")
-        response = self.cur.fetchone()
-        return(response) 
+        self.connection.commit()
+
+    def __del__(self):
+        print(f"{__name__} being deleted")
+
+#cur.execute('INSERT INTO "{}" VALUES(?, ?)'.format(group.replace('"', '""')), (food, 1))
