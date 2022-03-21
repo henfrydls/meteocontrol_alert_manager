@@ -1,8 +1,8 @@
 """Settings file for managing login info and encrypting"""
 
 from re import search
-from sql_manager import Users, Data
-from password import Password
+from resources.sql_manager import Users, Data
+from resources.password import Password
 
 
 SERVERS_DICT = {"imap.gmail.com":"Gmail"}
