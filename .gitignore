@@ -11,7 +11,7 @@ pyvenv.cfg
 __pycache__
 
 # exclude everything
-resources/*
+db/*
 
 # exception to the rule
-!resources/info.txt
+!db/info.txt
