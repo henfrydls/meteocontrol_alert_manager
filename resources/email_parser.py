@@ -21,9 +21,15 @@ class Parse:
         print(f"{__name__} being deleted")
 
 
-    def clean(self, text):
-        # clean text for creating a folder
-        return "".join(c if c.isalnum() else "_" for c in text)
+    def convert(self, time):
+        if int(time[:2]) < 12:
+            return time + " AM"
+        else:
+            if int(time[:2]) == 12:
+                return time + " PM"
+            elif (int(time[:2])-12) < 10:
+                return f"0{(int(time[:2])-12)}{time[2:]} PM"
+            return f"{(int(time[:2])-12)}{time[2:]} PM"
 
 
     def extraction(self, body, ind):
@@ -43,7 +49,8 @@ class Parse:
                     re.findall("(?<=Plant name: )(.*?)(?=\r)", body)
 
             # Joining multiples information due to old firmware version
-            time = [time[0].replace(" ", ", ")]
+            time = time[0].replace(" ", ", ").split("-")
+            time = [f"{time[1]}/{time[2].split(', ')[0]}/{time[0]}, {self.convert(time[2].split(', ')[1])}"]
             description = [" ".join(description)]
             device = [": ".join([" ".join(list_) for list_ in device])]
 
@@ -99,8 +106,8 @@ class Parse:
             self.storing(info_pack, id)
             
 
-    def parsing(self, N) -> None:
-        for i in range(N, N-N, -1):
+    def parsing(self, total_messages, messages_to_read) -> None:
+        for i in range(total_messages, total_messages-messages_to_read, -1):
             msg = self.LG.fetch(i)
             for response in msg:
                 if isinstance(response, tuple):
