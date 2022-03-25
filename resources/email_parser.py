@@ -113,15 +113,9 @@ class Parse:
                 if isinstance(response, tuple):
                     # parse a bytes email into a message object
                     msg = email.message_from_bytes(response[1])
-                    # decode the email subject
-                    subject, encoding = decode_header(msg["Subject"])[0]
-                    if isinstance(subject, bytes):
-                        # if it's a bytes, decode to str
-                        subject = subject.decode(encoding)
                     # decode email sender
-                    From, encoding = decode_header(msg.get("From"))[0]
-                    # cleaning from
-                    from_clean = (((From.split("<"))[1]).split(">")[0])
+                    from_clean = (re.findall("\S+@\S+[\w-]+\.+[\w-]{2,100}", 
+                        str(decode_header(msg.get("From"))))[0].split("<"))[1]
                     # just review emails comming from a particular source
                     if (from_clean.strip() == self.LG.monitoring_email):
                         # if the email message is multipart
